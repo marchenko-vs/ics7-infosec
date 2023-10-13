@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-#define MAX_SIZE 100000
+#define MAX_SIZE 102400
 
 int ip_table[8][8];
 int pc_1_table[8][8]; // [8][7]
@@ -18,8 +18,8 @@ int shifts_table[16] = {1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1};
 
 unsigned char keys[16][49];
 
-unsigned char key[65] = "0001001100110100010101110111100110011011101111001101111111110001";
-unsigned char iv[65] = "0001001100110100010101110111100110011011101111001101111111110001";
+unsigned char key[65];
+unsigned char iv[65];
 
 int init_table(const char* const filename, int table[8][8], const size_t rows, const size_t cols)
 {
@@ -206,7 +206,7 @@ int bin_to_dec(unsigned char *bits, const size_t size)
     return result;
 }
 
-unsigned char xor(const unsigned char a, const unsigned char b)
+unsigned char _xor(const unsigned char a, const unsigned char b)
 {
     if ((a == '1' && b == '0') || (a == '0' && b == '1'))
         return '1';
@@ -220,7 +220,7 @@ void xor_buffers(const unsigned char* const buffer_1,
 {
     for (size_t i = 0; i < len; ++i)
     {
-        result[i] = xor(buffer_1[i], buffer_2[i]);
+        result[i] = _xor(buffer_1[i], buffer_2[i]);
     }
 }
 
@@ -480,13 +480,27 @@ void fwrite_text(const char* const filename, unsigned char* buffer, const size_t
     fclose(f);
 }
 
+void fread_key(const char* const filename, unsigned char* buffer)
+{
+    FILE* f = fopen(filename, "r");
+
+    fscanf(f, "%s", buffer);
+
+    fclose(f);
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 4)
     {
-        printf("Error: program requiers 3 filenames.\n");
+        printf("Error: program requires 3 filenames.\n");
         return -1;
     }
+
+    fread_key("cfg/key.txt", key);
+    key[64] = '\0';
+    fread_key("cfg/iv.txt", iv);
+    iv[64] = '\0';
 
     init_tables();
 
@@ -507,6 +521,13 @@ int main(int argc, char **argv)
     bits[8] = '\0';
 
     int len = fread_text(argv[1], input_buf);
+
+    if (len == 0)
+    {
+        printf("Error: empty input file.\n");
+        return -2;
+    }
+
     int mod = len % 8;
 
     if (mod != 0)
