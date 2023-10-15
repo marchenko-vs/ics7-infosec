@@ -3,7 +3,7 @@
 #include <math.h>
 #include <string.h>
 
-#define MAX_SIZE 102400
+#define MAX_SIZE 512000
 
 int ip_table[8][8];
 int pc_1_table[8][8]; // [8][7]
