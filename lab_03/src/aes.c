@@ -22,10 +22,12 @@ byte_t galois_table_b[256];
 byte_t galois_table_d[256];
 byte_t galois_table_e[256];
 
-byte_t key[BLOCK_SIZE];
+byte_t key[32];
 byte_t iv[BLOCK_SIZE];
-byte_t round_constants[ROUNDS] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36};
-byte_t keys[ROUNDS + 1][BLOCK_SIZE];
+
+byte_t round_constants[15] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 
+                              0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a};
+byte_t keys[20][BLOCK_SIZE];
 
 void init_table(const char *const filename, byte_t table[16][16], 
                 const size_t rows, const size_t cols)
@@ -43,11 +45,13 @@ void init_table(const char *const filename, byte_t table[16][16],
     fclose(f);
 }
 
-void init_key(const char *const filename, byte_t *array, const size_t size)
+size_t init_key(const char *const filename, byte_t *array)
 {
     FILE *f = fopen(filename, "rb");
-    fread(array, sizeof(byte_t), size, f);
+    size_t len = fread(array, sizeof(byte_t), 32, f);
     fclose(f);
+
+    return len;
 }
 
 void init_array(const char *const filename, byte_t *array, const size_t size)
@@ -230,13 +234,13 @@ static void add_round_const(byte_t *key, const size_t round)
     key[0] = key[0] ^ round_constants[round];
 }
 
-static void generate_keys(const byte_t *const key)
+void generate_keys_128(const byte_t *const key)
 {
     byte_t tmp[BLOCK_SIZE];
     copy_block(tmp, key, BLOCK_SIZE);
     copy_block(keys[0], tmp, BLOCK_SIZE);
 
-    for (size_t i = 1; i <= ROUNDS; ++i)
+    for (size_t i = 1; i <= ROUNDS_128; ++i)
     {
         rotate_key(tmp, keys[i]);
         sub_bytes(keys[i], s_table, 4);
@@ -249,23 +253,70 @@ static void generate_keys(const byte_t *const key)
     }
 }
 
-void encrypt(const byte_t *const plain_block, byte_t *cipher_block, byte_t *key)
+void generate_keys_192(const byte_t *const key)
+{
+    byte_t tmp[16];
+    byte_t memory[8];
+    copy_block(tmp, key, 16);
+    copy_block(memory, key + 16, 8);
+
+    copy_block(keys[0], tmp, 16);
+
+    for (size_t i = 1; i <= ROUNDS_192; ++i)
+    {
+        rotate_key(tmp, keys[i]);
+        sub_bytes(keys[i], s_table, 4);
+        add_round_const(keys[i], i - 1);
+        _xor(keys[i], tmp, keys[i], 4);
+        _xor(keys[i], tmp + 4, keys[i] + 4, 4);
+        _xor(keys[i] + 4, tmp + 8, keys[i] + 8, 4);
+        _xor(keys[i] + 8, tmp + 12, keys[i] + 12, 4);
+        
+        copy_block(tmp, memory, 8);
+        copy_block(tmp + 8, keys[i], 16);
+        copy_block(memory, keys[i] + 16, 8);
+    }
+}
+
+void generate_keys_256(const byte_t *const key)
+{
+    byte_t tmp[16];
+    byte_t memory[16];
+    copy_block(tmp, key, 16);
+    copy_block(memory, key + 16, 16);
+
+    copy_block(keys[0], tmp, 16);
+
+    for (size_t i = 1; i <= ROUNDS_256; ++i)
+    {
+        rotate_key(tmp, keys[i]);
+        sub_bytes(keys[i], s_table, 4);
+        add_round_const(keys[i], i - 1);
+        _xor(keys[i], tmp, keys[i], 4);
+        _xor(keys[i], tmp + 4, keys[i] + 4, 4);
+        _xor(keys[i] + 4, tmp + 8, keys[i] + 8, 4);
+        _xor(keys[i] + 8, tmp + 12, keys[i] + 12, 4);
+        
+        copy_block(tmp, memory, 16);
+        copy_block(memory, keys[i], 16);
+    }
+}
+
+void encrypt(const byte_t *const plain_block, byte_t *cipher_block, const size_t rounds)
 {
     byte_t tmp[BLOCK_SIZE];
     copy_block(tmp, plain_block, BLOCK_SIZE);
-    // generate keys for 10 rounds
-    generate_keys(key);
     // initial XOR
     _xor(tmp, keys[0], tmp, BLOCK_SIZE);
     
-    for (size_t i = 1; i <= ROUNDS; ++i)
+    for (size_t i = 1; i <= rounds; ++i)
     {
         // substitute bytes
         sub_bytes(tmp, s_table, BLOCK_SIZE);
         // shift rows
         shift_rows_left(tmp);
         // mix column
-        if (i != ROUNDS)
+        if (i != rounds)
             mix_columns(tmp, cipher_block);
         else
             copy_block(cipher_block, tmp, BLOCK_SIZE);
@@ -276,17 +327,15 @@ void encrypt(const byte_t *const plain_block, byte_t *cipher_block, byte_t *key)
     copy_block(cipher_block, tmp, BLOCK_SIZE);
 }
 
-void decrypt(const byte_t *const plain_block, byte_t *cipher_block, byte_t *key)
+void decrypt(const byte_t *const plain_block, byte_t *cipher_block, const size_t rounds)
 {
     byte_t tmp[BLOCK_SIZE];
     copy_block(tmp, plain_block, BLOCK_SIZE);
-    // generate keys for 10 rounds
-    generate_keys(key);
     
-    for (size_t i = 1; i <= ROUNDS; ++i)
+    for (size_t i = 1; i <= rounds; ++i)
     {
         // add round key
-        _xor(tmp, keys[ROUNDS - i + 1], tmp, BLOCK_SIZE);
+        _xor(tmp, keys[rounds - i + 1], tmp, BLOCK_SIZE);
         // mix column
         if (i != 1)
             inv_mix_columns(tmp, cipher_block);
