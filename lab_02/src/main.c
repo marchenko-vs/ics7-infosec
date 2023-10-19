@@ -275,10 +275,8 @@ void generate_keys(unsigned char *key)
     }
 }
 
-void encrypt_block(unsigned char *plaintext, unsigned char *key, unsigned char *encrypted_text)
+void encrypt_block(unsigned char *plaintext, unsigned char *encrypted_text)
 {
-    generate_keys(key);
-
     // plaintext permutation
     unsigned char plaintext_permuted[65];
     plaintext_permuted[64] = '\0';
@@ -364,10 +362,8 @@ void encrypt_block(unsigned char *plaintext, unsigned char *key, unsigned char *
     permutation(encrypted, encrypted_text, ip_reversed_table, 8, 8);
 }
 
-void decrypt_block(unsigned char *plaintext, unsigned char *key, unsigned char *decrypted_text)
+void decrypt_block(unsigned char *plaintext, unsigned char *decrypted_text)
 {
-    generate_keys(key);
-
     // plaintext permutation
     unsigned char plaintext_permuted[65];
     plaintext_permuted[64] = '\0';
@@ -491,6 +487,7 @@ int main(int argc, char **argv)
 
     fread_key("cfg/key.txt", key);
     fread_key("cfg/iv.txt", iv);
+    generate_keys(key);
 
     init_tables();
 
@@ -505,8 +502,6 @@ int main(int argc, char **argv)
 
     FILE *f_in = fopen(argv[2], "rb");
     FILE *f_out = fopen(argv[3], "wb");
-
-    size_t progress = 0;
 
     if (strcmp(argv[1], "-e") == 0)
     {
@@ -530,7 +525,7 @@ int main(int argc, char **argv)
         }
 
         xor_buffers(plain_bits, iv, cipher_iv, 64);
-        encrypt_block(cipher_iv, key, cipher_bits);
+        encrypt_block(cipher_iv, cipher_bits);
 
         for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
         {
@@ -554,7 +549,7 @@ int main(int argc, char **argv)
             }
 
             xor_buffers(plain_bits, plain_xor_cipher, cipher_iv, 64);
-            encrypt_block(cipher_iv, key, cipher_bits);
+            encrypt_block(cipher_iv, cipher_bits);
             
             for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
             {
@@ -563,9 +558,6 @@ int main(int argc, char **argv)
             }
 
             fwrite(cipher_block, sizeof(unsigned char), 8, f_out);
-
-            progress++;
-            printf("Iteration: %zu\n", progress);
 
             xor_buffers(plain_bits, cipher_bits, plain_xor_cipher, 64);
             len = fread(plain_block, sizeof(unsigned char), 8, f_in);
@@ -592,7 +584,7 @@ int main(int argc, char **argv)
             copy(bits, cipher_bits + j, 8);
         }
 
-        decrypt_block(cipher_bits, key, cipher_iv);
+        decrypt_block(cipher_bits, cipher_iv);
         xor_buffers(iv, cipher_iv, plain_bits, 64);
 
         for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
@@ -616,7 +608,7 @@ int main(int argc, char **argv)
                 copy(bits, cipher_bits + j, 8);
             }
 
-            decrypt_block(cipher_bits, key, cipher_iv);
+            decrypt_block(cipher_bits, cipher_iv);
             xor_buffers(cipher_iv, plain_xor_cipher, plain_bits, 64);
             
             for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
@@ -626,9 +618,6 @@ int main(int argc, char **argv)
             }
 
             fwrite(plain_block, sizeof(unsigned char), 8, f_out);
-            
-            progress++;
-            printf("Iteration: %zu\n", progress);
 
             xor_buffers(cipher_bits, plain_bits, plain_xor_cipher, 64);
             len = fread(cipher_block, sizeof(unsigned char), 8, f_in);
