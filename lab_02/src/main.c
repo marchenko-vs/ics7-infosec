@@ -3,8 +3,6 @@
 #include <math.h>
 #include <string.h>
 
-#define MAX_SIZE 512000
-
 int ip_table[8][8];
 int pc_1_table[8][8]; // [8][7]
 int pc_2_table[8][8]; // [8][6]
@@ -30,11 +28,13 @@ int init_table(const char* const filename, int table[8][8], const size_t rows, c
         rc = 1;
 
     for (size_t i = 0; rc == 0 && i < rows; ++i)
+    {
         for (size_t j = 0; rc == 0 && j < cols; ++j)
         {
             if (fscanf(f, "%d", &table[i][j]) != 1)
                 rc = 2;
         }
+    }
 
     if (rc != 1)
         fclose(f);
@@ -453,20 +453,6 @@ void decrypt_block(unsigned char *plaintext, unsigned char *key, unsigned char *
     permutation(encrypted, decrypted_text, ip_reversed_table, 8, 8);
 }
 
-int fread_text(const char* const filename, unsigned char* buffer)
-{
-    FILE* f;
-
-    if ((f = fopen(filename, "rb")) == NULL)
-        return -1;
-
-    int len = fread(buffer, sizeof(unsigned char), MAX_SIZE, f);
-    buffer[len] = '\0';
-
-    fclose(f);
-    return len;
-}
-
 void fwrite_text(const char* const filename, unsigned char* buffer, const size_t size)
 {
     FILE* f;
@@ -483,10 +469,16 @@ void fwrite_text(const char* const filename, unsigned char* buffer, const size_t
 void fread_key(const char* const filename, unsigned char* buffer)
 {
     FILE* f = fopen(filename, "r");
-
     fscanf(f, "%s", buffer);
-
     fclose(f);
+}
+
+void fill_buffer(unsigned char *buffer, const size_t size)
+{
+    for (size_t i = size; i < 8; ++i)
+    {
+        buffer[i] = 0;
+    }
 }
 
 int main(int argc, char **argv)
@@ -498,110 +490,158 @@ int main(int argc, char **argv)
     }
 
     fread_key("cfg/key.txt", key);
-    key[64] = '\0';
     fread_key("cfg/iv.txt", iv);
-    iv[64] = '\0';
 
     init_tables();
 
-    unsigned char input_buf[MAX_SIZE];
-    unsigned char output_buf[MAX_SIZE];
-    unsigned char decryption_buf[MAX_SIZE];
+    unsigned char plain_block[9] = "";
+    unsigned char cipher_block[9] = "";
 
-    unsigned char current_block[65];
-    current_block[64] = '\0';
+    unsigned char plain_bits[65] = "";
+    unsigned char cipher_bits[65] = "";
+    unsigned char plain_xor_cipher[65] = "";
+    unsigned char cipher_iv[65] = "";
+    unsigned char bits[9] = "";
 
-    unsigned char block_xor_plain[65];
-    block_xor_plain[64] = '\0';
-    
-    unsigned char encrypted_block[65];
-    encrypted_block[64] = '\0';
-    
-    unsigned char bits[9];
-    bits[8] = '\0';
+    FILE *f_in = fopen(argv[2], "rb");
+    FILE *f_out = fopen(argv[3], "wb");
 
-    int len = fread_text(argv[1], input_buf);
+    size_t progress = 0;
 
-    if (len == 0)
+    if (strcmp(argv[1], "-e") == 0)
     {
-        printf("Error: empty input file.\n");
-        return -2;
+        size_t len = fread(plain_block, sizeof(unsigned char), 8, f_in);
+
+        if (len == 0)
+        {
+            printf("Error: empty input file.\n");
+            fclose(f_in);
+            fclose(f_out);
+            return -2;
+        }
+
+        if (len < 8)
+            fill_buffer(plain_block, len);
+
+        for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
+        {
+            dec_to_bin(plain_block[i], bits);
+            copy(bits, plain_bits + j, 8);
+        }
+
+        xor_buffers(plain_bits, iv, cipher_iv, 64);
+        encrypt_block(cipher_iv, key, cipher_bits);
+
+        for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
+        {
+            copy(cipher_bits + j, bits, 8);
+            cipher_block[i] = bin_to_dec(bits, 8);
+        }
+
+        fwrite(cipher_block, sizeof(unsigned char), 8, f_out);
+        xor_buffers(plain_bits, cipher_bits, plain_xor_cipher, 64);
+        len = fread(plain_block, sizeof(unsigned char), 8, f_in);
+
+        while (len != 0)
+        {
+            if (len < 8)
+                fill_buffer(plain_block, len);
+
+            for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
+            {
+                dec_to_bin(plain_block[i], bits);
+                copy(bits, plain_bits + j, 8);
+            }
+
+            xor_buffers(plain_bits, plain_xor_cipher, cipher_iv, 64);
+            encrypt_block(cipher_iv, key, cipher_bits);
+            
+            for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
+            {
+                copy(cipher_bits + j, bits, 8);
+                cipher_block[i] = bin_to_dec(bits, 8);
+            }
+
+            fwrite(cipher_block, sizeof(unsigned char), 8, f_out);
+
+            progress++;
+            printf("Iteration: %zu\n", progress);
+
+            xor_buffers(plain_bits, cipher_bits, plain_xor_cipher, 64);
+            len = fread(plain_block, sizeof(unsigned char), 8, f_in);
+        }
+    }
+    else if (strcmp(argv[1], "-d") == 0)
+    {
+        size_t len = fread(cipher_block, sizeof(unsigned char), 8, f_in);
+
+        if (len == 0)
+        {
+            printf("Error: empty input file.\n");
+            fclose(f_in);
+            fclose(f_out);
+            return -2;
+        }
+
+        if (len < 8)
+            fill_buffer(cipher_block, len);
+
+        for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
+        {
+            dec_to_bin(cipher_block[i], bits);
+            copy(bits, cipher_bits + j, 8);
+        }
+
+        decrypt_block(cipher_bits, key, cipher_iv);
+        xor_buffers(iv, cipher_iv, plain_bits, 64);
+
+        for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
+        {
+            copy(plain_bits + j, bits, 8);
+            plain_block[i] = bin_to_dec(bits, 8);
+        }
+
+        fwrite(plain_block, sizeof(unsigned char), 8, f_out);
+        xor_buffers(cipher_bits, plain_bits, plain_xor_cipher, 64);
+        len = fread(cipher_block, sizeof(unsigned char), 8, f_in);
+
+        while (len != 0)
+        {
+            if (len < 8)
+                fill_buffer(cipher_block, len);
+
+            for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
+            {
+                dec_to_bin(cipher_block[i], bits);
+                copy(bits, cipher_bits + j, 8);
+            }
+
+            decrypt_block(cipher_bits, key, cipher_iv);
+            xor_buffers(cipher_iv, plain_xor_cipher, plain_bits, 64);
+            
+            for (size_t i = 0, j = 0; i < 8; ++i, j += 8)
+            {
+                copy(plain_bits + j, bits, 8);
+                plain_block[i] = bin_to_dec(bits, 8);
+            }
+
+            fwrite(plain_block, sizeof(unsigned char), 8, f_out);
+            
+            progress++;
+            printf("Iteration: %zu\n", progress);
+
+            xor_buffers(cipher_bits, plain_bits, plain_xor_cipher, 64);
+            len = fread(cipher_block, sizeof(unsigned char), 8, f_in);
+        }
+    }
+    else
+    {
+        printf("Error: incorrect option %s.\n", argv[1]);
+        return -3;
     }
 
-    int mod = len % 8;
-
-    if (mod != 0)
-    {
-        size_t i = 0;
-        for ( ; i < 8 - mod; ++i)
-        {
-            input_buf[len++] = '\0';
-        }
-    }
-
-    int blocks = len / 8;
-
-    for (size_t j = 0; j < blocks; ++j)
-    {
-        for (size_t i = 0, k = 0; i < 8; ++i, k += 8)
-        {
-            dec_to_bin(input_buf[i + 8 * j], bits);
-            copy(bits, current_block + k, 8);
-        }
-        
-        if (j == 0)
-        {
-            xor_buffers(current_block, iv, block_xor_plain, 64);
-            encrypt_block(block_xor_plain, key, encrypted_block);
-        }
-        else
-        {
-            xor_buffers(block_xor_plain, current_block, block_xor_plain, 64);
-            encrypt_block(block_xor_plain, key, encrypted_block);
-        }
-        
-        for (size_t i = 0, k = 0; i < 8; ++i, k += 8)
-        {
-            copy(encrypted_block + k, bits, 8);
-            output_buf[i + j * 8] = bin_to_dec(bits, 8);
-        }
-
-        xor_buffers(current_block, encrypted_block, block_xor_plain, 64);
-    }
-
-    output_buf[len] = '\0';
-    fwrite_text(argv[2], output_buf, len);
-
-    for (size_t j = 0; j < blocks; ++j)
-    {
-        for (size_t i = 0, k = 0; i < 8; ++i, k += 8)
-        {
-            dec_to_bin(output_buf[i + 8 * j], bits);
-            copy(bits, current_block + k, 8);
-        }
-        
-        if (j == 0)
-        {
-            decrypt_block(current_block, key, encrypted_block);
-            xor_buffers(encrypted_block, iv, block_xor_plain, 64);
-        }
-        else
-        {
-            decrypt_block(current_block, key, encrypted_block);
-            xor_buffers(block_xor_plain, encrypted_block, block_xor_plain, 64);
-        }
-
-        for (size_t i = 0, k = 0; i < 8; ++i, k += 8)
-        {
-            copy(block_xor_plain + k, bits, 8);
-            decryption_buf[i + j * 8] = bin_to_dec(bits, 8);
-        }
-
-        xor_buffers(current_block, block_xor_plain, block_xor_plain, 64);
-    }
-
-    decryption_buf[len] = '\0';
-    fwrite_text(argv[3], decryption_buf, len);
+    fclose(f_in);
+    fclose(f_out);
 
     return 0;
 }
