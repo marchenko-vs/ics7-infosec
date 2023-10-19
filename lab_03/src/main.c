@@ -27,7 +27,7 @@ int main(int argc, char **argv)
     byte_t plain_block[BLOCK_SIZE];
     byte_t cipher_iv[BLOCK_SIZE];
     byte_t cipher_block[BLOCK_SIZE];
-    size_t progress = 0;
+    //size_t progress = 0;
 
     if (strcmp(argv[1], "-e") == 0)
     {
@@ -59,8 +59,8 @@ int main(int argc, char **argv)
             _xor(plain_block, cipher_iv, cipher_block, BLOCK_SIZE);
             fwrite(cipher_block, sizeof(byte_t), BLOCK_SIZE, f_out);
 
-            progress++;
-            printf("Iteration: %zu\n", progress);
+            //progress++;
+            //printf("Iteration: %zu\n", progress);
 
             len = fread(plain_block, sizeof(byte_t), BLOCK_SIZE, f_in);
         }
@@ -98,8 +98,8 @@ int main(int argc, char **argv)
             _xor(cipher_block, cipher_iv, plain_block, BLOCK_SIZE);
             fwrite(plain_block, sizeof(byte_t), BLOCK_SIZE, f_out);
 
-            progress++;
-            printf("Iteration: %zu\n", progress);
+            //progress++;
+            //printf("Iteration: %zu\n", progress);
 
             len = fread(cipher_block, sizeof(byte_t), BLOCK_SIZE, f_in);
         }
