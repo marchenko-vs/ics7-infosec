@@ -3,33 +3,33 @@
 
 #include "aes.h"
 
-byte_t s_table[16][16];
-byte_t inv_s_table[16][16];
+uint8_t s_table[16][16];
+uint8_t inv_s_table[16][16];
 
-byte_t predefined_matrix[4][4] = {{0x02, 0x03, 0x01, 0x01},
+uint8_t predefined_matrix[4][4] = {{0x02, 0x03, 0x01, 0x01},
                                   {0x01, 0x02, 0x03, 0x01},
                                   {0x01, 0x01, 0x02, 0x03},
                                   {0x03, 0x01, 0x01, 0x02}};
-byte_t inv_predefined_matrix[4][4] = {{0x0e, 0x0b, 0x0d, 0x09},
+uint8_t inv_predefined_matrix[4][4] = {{0x0e, 0x0b, 0x0d, 0x09},
                                       {0x09, 0x0e, 0x0b, 0x0d},
                                       {0x0d, 0x09, 0x0e, 0x0b},
                                       {0x0b, 0x0d, 0x09, 0x0e}};
 
-byte_t galois_table_2[256];
-byte_t galois_table_3[256];
-byte_t galois_table_9[256];
-byte_t galois_table_b[256];
-byte_t galois_table_d[256];
-byte_t galois_table_e[256];
+uint8_t galois_table_2[256];
+uint8_t galois_table_3[256];
+uint8_t galois_table_9[256];
+uint8_t galois_table_b[256];
+uint8_t galois_table_d[256];
+uint8_t galois_table_e[256];
 
-byte_t key[32];
-byte_t iv[BLOCK_SIZE];
+uint8_t key[32];
+uint8_t iv[BLOCK_SIZE];
 
-byte_t round_constants[15] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 
+uint8_t round_constants[15] = {0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 
                               0x80, 0x1b, 0x36, 0x6c, 0xd8, 0xab, 0x4d, 0x9a};
-byte_t keys[20][BLOCK_SIZE];
+uint8_t keys[20][BLOCK_SIZE];
 
-void init_table(const char *const filename, byte_t table[16][16], 
+void init_table(const char *const filename, uint8_t table[16][16], 
                 const size_t rows, const size_t cols)
 {
     FILE *f = fopen(filename, "r");
@@ -45,16 +45,16 @@ void init_table(const char *const filename, byte_t table[16][16],
     fclose(f);
 }
 
-size_t init_key(const char *const filename, byte_t *array)
+size_t init_key(const char *const filename, uint8_t *array)
 {
     FILE *f = fopen(filename, "rb");
-    size_t len = fread(array, sizeof(byte_t), 32, f);
+    size_t len = fread(array, sizeof(uint8_t), 32, f);
     fclose(f);
 
     return len;
 }
 
-void init_array(const char *const filename, byte_t *array, const size_t size)
+void init_array(const char *const filename, uint8_t *array, const size_t size)
 {
     FILE *f = fopen(filename, "r");
 
@@ -66,7 +66,7 @@ void init_array(const char *const filename, byte_t *array, const size_t size)
     fclose(f);
 }
 
-static void sub_bytes(byte_t *block, byte_t table[16][16], const size_t size)
+static void sub_bytes(uint8_t *block, uint8_t table[16][16], const size_t size)
 {
     for (size_t i = 0; i < size; ++i)
     {
@@ -74,7 +74,7 @@ static void sub_bytes(byte_t *block, byte_t table[16][16], const size_t size)
     }
 }
 
-static void copy_block(byte_t *dst, const byte_t *const src, const size_t size)
+static void copy_block(uint8_t *dst, const uint8_t *const src, const size_t size)
 {
     for (size_t i = 0; i < size; ++i)
     {
@@ -82,9 +82,9 @@ static void copy_block(byte_t *dst, const byte_t *const src, const size_t size)
     }
 }
 
-static void transpose_block(byte_t *block, const size_t size)
+static void transpose_block(uint8_t *block, const size_t size)
 {
-    byte_t tmp[BLOCK_SIZE];
+    uint8_t tmp[BLOCK_SIZE];
     copy_block(tmp, block, size);
 
     for (size_t i = 0, j = 0; i < 4; ++i, j += 4)
@@ -98,12 +98,12 @@ static void transpose_block(byte_t *block, const size_t size)
     copy_block(block, tmp, size);
 }
 
-static void shift_rows_left(byte_t *block)
+static void shift_rows_left(uint8_t *block)
 {
     transpose_block(block, BLOCK_SIZE);
     
     // second row
-    byte_t tmp = block[4];
+    uint8_t tmp = block[4];
     block[4] = block[5];
     block[5] = block[6];
     block[6] = block[7];
@@ -125,11 +125,11 @@ static void shift_rows_left(byte_t *block)
     transpose_block(block, BLOCK_SIZE);
 }
 
-static void shift_rows_right(byte_t *block)
+static void shift_rows_right(uint8_t *block)
 {
     transpose_block(block, BLOCK_SIZE);
     // second row
-    byte_t tmp = block[7];
+    uint8_t tmp = block[7];
     block[7] = block[6];
     block[6] = block[5];
     block[5] = block[4];
@@ -151,7 +151,7 @@ static void shift_rows_right(byte_t *block)
     transpose_block(block, BLOCK_SIZE);
 }
 
-static byte_t galois_mul(const byte_t a, const byte_t b)
+static uint8_t galois_mul(const uint8_t a, const uint8_t b)
 {
     if (a == 0x01)
         return b;
@@ -163,7 +163,7 @@ static byte_t galois_mul(const byte_t a, const byte_t b)
     return 0x00;
 }
 
-static byte_t inv_galois_mul(const byte_t a, const byte_t b)
+static uint8_t inv_galois_mul(const uint8_t a, const uint8_t b)
 {
     if (a == 0x09)
         return galois_table_9[b];
@@ -177,17 +177,17 @@ static byte_t inv_galois_mul(const byte_t a, const byte_t b)
     return 0x00;
 }
 
-static void mix_columns(byte_t *block, byte_t *result)
+static void mix_columns(uint8_t *block, uint8_t *result)
 {
     transpose_block(block, BLOCK_SIZE);
     for (size_t i = 0, j = 0; j < 4; ++i, ++j)
     {
         for (size_t k = 0, l = 0; k < 4; ++k, l += 4)
         {
-            byte_t byte_1 = galois_mul(predefined_matrix[k][0], block[0 + j]);
-            byte_t byte_2 = galois_mul(predefined_matrix[k][1], block[4 + j]);
-            byte_t byte_3 = galois_mul(predefined_matrix[k][2], block[8 + j]);
-            byte_t byte_4 = galois_mul(predefined_matrix[k][3], block[12 + j]);
+            uint8_t byte_1 = galois_mul(predefined_matrix[k][0], block[0 + j]);
+            uint8_t byte_2 = galois_mul(predefined_matrix[k][1], block[4 + j]);
+            uint8_t byte_3 = galois_mul(predefined_matrix[k][2], block[8 + j]);
+            uint8_t byte_4 = galois_mul(predefined_matrix[k][3], block[12 + j]);
             
             result[l + i] = byte_1 ^ byte_2 ^ byte_3 ^ byte_4;
         }
@@ -195,17 +195,17 @@ static void mix_columns(byte_t *block, byte_t *result)
     transpose_block(result, BLOCK_SIZE);
 }
 
-static void inv_mix_columns(byte_t *block, byte_t *result)
+static void inv_mix_columns(uint8_t *block, uint8_t *result)
 {
     transpose_block(block, BLOCK_SIZE);
     for (size_t i = 0, j = 0; j < 4; ++i, ++j)
     {
         for (size_t k = 0, l = 0; k < 4; ++k, l += 4)
         {
-            byte_t byte_1 = inv_galois_mul(inv_predefined_matrix[k][0], block[0 + j]);
-            byte_t byte_2 = inv_galois_mul(inv_predefined_matrix[k][1], block[4 + j]);
-            byte_t byte_3 = inv_galois_mul(inv_predefined_matrix[k][2], block[8 + j]);
-            byte_t byte_4 = inv_galois_mul(inv_predefined_matrix[k][3], block[12 + j]);
+            uint8_t byte_1 = inv_galois_mul(inv_predefined_matrix[k][0], block[0 + j]);
+            uint8_t byte_2 = inv_galois_mul(inv_predefined_matrix[k][1], block[4 + j]);
+            uint8_t byte_3 = inv_galois_mul(inv_predefined_matrix[k][2], block[8 + j]);
+            uint8_t byte_4 = inv_galois_mul(inv_predefined_matrix[k][3], block[12 + j]);
             
             result[l + i] = byte_1 ^ byte_2 ^ byte_3 ^ byte_4;
         }
@@ -213,7 +213,7 @@ static void inv_mix_columns(byte_t *block, byte_t *result)
     transpose_block(result, BLOCK_SIZE);
 }
 
-void _xor(byte_t *block, byte_t *key, byte_t *result, const size_t size)
+void _xor(uint8_t *block, uint8_t *key, uint8_t *result, const size_t size)
 {
     for (size_t i = 0 ; i < size; ++i)
     {
@@ -221,7 +221,7 @@ void _xor(byte_t *block, byte_t *key, byte_t *result, const size_t size)
     }
 }
 
-static void rotate_key(byte_t *key, byte_t *result)
+static void rotate_key(uint8_t *key, uint8_t *result)
 {
     result[0] = key[13];
     result[1] = key[14];
@@ -229,14 +229,14 @@ static void rotate_key(byte_t *key, byte_t *result)
     result[3] = key[12];
 }
 
-static void add_round_const(byte_t *key, const size_t round)
+static void add_round_const(uint8_t *key, const size_t round)
 {
     key[0] = key[0] ^ round_constants[round];
 }
 
-void generate_keys_128(const byte_t *const key)
+void generate_keys_128(const uint8_t *const key)
 {
-    byte_t tmp[BLOCK_SIZE];
+    uint8_t tmp[BLOCK_SIZE];
     copy_block(tmp, key, BLOCK_SIZE);
     copy_block(keys[0], tmp, BLOCK_SIZE);
 
@@ -253,10 +253,10 @@ void generate_keys_128(const byte_t *const key)
     }
 }
 
-void generate_keys_192(const byte_t *const key)
+void generate_keys_192(const uint8_t *const key)
 {
-    byte_t tmp[16];
-    byte_t memory[8];
+    uint8_t tmp[16];
+    uint8_t memory[8];
     copy_block(tmp, key, 16);
     copy_block(memory, key + 16, 8);
 
@@ -278,10 +278,10 @@ void generate_keys_192(const byte_t *const key)
     }
 }
 
-void generate_keys_256(const byte_t *const key)
+void generate_keys_256(const uint8_t *const key)
 {
-    byte_t tmp[16];
-    byte_t memory[16];
+    uint8_t tmp[16];
+    uint8_t memory[16];
     copy_block(tmp, key, 16);
     copy_block(memory, key + 16, 16);
 
@@ -302,9 +302,9 @@ void generate_keys_256(const byte_t *const key)
     }
 }
 
-void encrypt(const byte_t *const plain_block, byte_t *cipher_block, const size_t rounds)
+void encrypt(const uint8_t *const plain_block, uint8_t *cipher_block, const size_t rounds)
 {
-    byte_t tmp[BLOCK_SIZE];
+    uint8_t tmp[BLOCK_SIZE];
     copy_block(tmp, plain_block, BLOCK_SIZE);
     // initial XOR
     _xor(tmp, keys[0], tmp, BLOCK_SIZE);
@@ -327,9 +327,9 @@ void encrypt(const byte_t *const plain_block, byte_t *cipher_block, const size_t
     copy_block(cipher_block, tmp, BLOCK_SIZE);
 }
 
-void decrypt(const byte_t *const plain_block, byte_t *cipher_block, const size_t rounds)
+void decrypt(const uint8_t *const plain_block, uint8_t *cipher_block, const size_t rounds)
 {
-    byte_t tmp[BLOCK_SIZE];
+    uint8_t tmp[BLOCK_SIZE];
     copy_block(tmp, plain_block, BLOCK_SIZE);
     
     for (size_t i = 1; i <= rounds; ++i)

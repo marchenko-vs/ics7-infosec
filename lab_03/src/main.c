@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "aes.h"
 
-void fill_buffer(byte_t *buffer, const size_t size);
+void fill_buffer(uint8_t *buffer, const size_t size);
 
 int main(int argc, char **argv)
 {
@@ -47,14 +48,14 @@ int main(int argc, char **argv)
         return -2;
     }
 
-    byte_t plain_block[BLOCK_SIZE];
-    byte_t cipher_iv[BLOCK_SIZE];
-    byte_t cipher_block[BLOCK_SIZE];
+    uint8_t plain_block[BLOCK_SIZE];
+    uint8_t cipher_iv[BLOCK_SIZE];
+    uint8_t cipher_block[BLOCK_SIZE];
 
     if (strcmp(argv[1], "-e") == 0)
     {
         FILE *f_in = fopen(argv[2], "rb");
-        size_t len = fread(plain_block, sizeof(byte_t), BLOCK_SIZE, f_in);
+        size_t len = fread(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
 
         if (len == 0)
         {
@@ -69,8 +70,8 @@ int main(int argc, char **argv)
 
         encrypt(iv, cipher_iv, rounds);
         _xor(plain_block, cipher_iv, cipher_block, BLOCK_SIZE);
-        fwrite(cipher_block, sizeof(byte_t), BLOCK_SIZE, f_out);
-        len = fread(plain_block, sizeof(byte_t), BLOCK_SIZE, f_in);
+        fwrite(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_out);
+        len = fread(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
 
         while (len != 0)
         {
@@ -79,9 +80,9 @@ int main(int argc, char **argv)
 
             encrypt(cipher_iv, cipher_iv, rounds);
             _xor(plain_block, cipher_iv, cipher_block, BLOCK_SIZE);
-            fwrite(cipher_block, sizeof(byte_t), BLOCK_SIZE, f_out);
+            fwrite(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_out);
 
-            len = fread(plain_block, sizeof(byte_t), BLOCK_SIZE, f_in);
+            len = fread(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
         }
 
         fclose(f_out);
@@ -90,7 +91,7 @@ int main(int argc, char **argv)
     else if (strcmp(argv[1], "-d") == 0)
     {
         FILE *f_in = fopen(argv[2], "rb");
-        size_t len = fread(cipher_block, sizeof(byte_t), BLOCK_SIZE, f_in);
+        size_t len = fread(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
 
         if (len == 0)
         {
@@ -105,8 +106,8 @@ int main(int argc, char **argv)
 
         encrypt(iv, cipher_iv, rounds);
         _xor(cipher_block, cipher_iv, plain_block, BLOCK_SIZE);
-        fwrite(plain_block, sizeof(byte_t), BLOCK_SIZE, f_out);
-        len = fread(cipher_block, sizeof(byte_t), BLOCK_SIZE, f_in);
+        fwrite(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_out);
+        len = fread(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
 
         while (len != 0)
         {
@@ -115,9 +116,9 @@ int main(int argc, char **argv)
 
             encrypt(cipher_iv, cipher_iv, rounds);
             _xor(cipher_block, cipher_iv, plain_block, BLOCK_SIZE);
-            fwrite(plain_block, sizeof(byte_t), BLOCK_SIZE, f_out);
+            fwrite(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_out);
 
-            len = fread(cipher_block, sizeof(byte_t), BLOCK_SIZE, f_in);
+            len = fread(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
         }
         
         fclose(f_out);
@@ -132,7 +133,7 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void fill_buffer(byte_t *buffer, const size_t size)
+void fill_buffer(uint8_t *buffer, const size_t size)
 {
     for (size_t i = size; i < BLOCK_SIZE; ++i)
     {
