@@ -74,7 +74,7 @@ static void sub_bytes(uint8_t *block, uint8_t table[16][16], const size_t size)
     }
 }
 
-static void copy_block(uint8_t *dst, const uint8_t *const src, const size_t size)
+void copy_block(uint8_t *dst, const uint8_t *const src, const size_t size)
 {
     for (size_t i = 0; i < size; ++i)
     {

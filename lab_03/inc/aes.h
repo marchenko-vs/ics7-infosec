@@ -34,5 +34,6 @@ void _xor(uint8_t *block, uint8_t *key, uint8_t *result, const size_t size);
 void generate_keys_128(const uint8_t *const key);
 void generate_keys_192(const uint8_t *const key);
 void generate_keys_256(const uint8_t *const key);
+void copy_block(uint8_t *dst, const uint8_t *const src, const size_t size);
 
 #endif // _AES_H_

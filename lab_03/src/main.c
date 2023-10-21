@@ -8,9 +8,9 @@ void fill_buffer(uint8_t *buffer, const size_t size);
 
 int main(int argc, char **argv)
 {
-    if (argc != 4)
+    if (argc != 3)
     {
-        printf("Error: program requires 3 parameters.\n");
+        printf("Error: program requires 2 parameters.\n");
         return -1;    
     }
 
@@ -52,83 +52,39 @@ int main(int argc, char **argv)
     uint8_t cipher_iv[BLOCK_SIZE];
     uint8_t cipher_block[BLOCK_SIZE];
 
-    if (strcmp(argv[1], "-e") == 0)
+    FILE *f_in = fopen(argv[1], "rb");
+    size_t len = fread(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
+
+    if (len == 0)
     {
-        FILE *f_in = fopen(argv[2], "rb");
-        size_t len = fread(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
+        printf("Error: input file is empty.\n");
+        return -2;
+    }
 
-        if (len == 0)
-        {
-            printf("Error: input file is empty.\n");
-            return -2;
-        }
+    FILE *f_out = fopen(argv[2], "wb");
 
-        FILE *f_out = fopen(argv[3], "wb");
+    if (len < 16)
+        fill_buffer(plain_block, len);
 
+    encrypt(iv, cipher_iv, rounds);
+    _xor(plain_block, cipher_iv, cipher_block, BLOCK_SIZE);
+    fwrite(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_out);
+    len = fread(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
+
+    while (len != 0)
+    {
         if (len < 16)
             fill_buffer(plain_block, len);
 
-        encrypt(iv, cipher_iv, rounds);
+        encrypt(cipher_iv, cipher_iv, rounds);
         _xor(plain_block, cipher_iv, cipher_block, BLOCK_SIZE);
         fwrite(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_out);
+
         len = fread(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
-
-        while (len != 0)
-        {
-            if (len < 16)
-                fill_buffer(plain_block, len);
-
-            encrypt(cipher_iv, cipher_iv, rounds);
-            _xor(plain_block, cipher_iv, cipher_block, BLOCK_SIZE);
-            fwrite(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_out);
-
-            len = fread(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
-        }
-
-        fclose(f_out);
-        fclose(f_in);
     }
-    else if (strcmp(argv[1], "-d") == 0)
-    {
-        FILE *f_in = fopen(argv[2], "rb");
-        size_t len = fread(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
 
-        if (len == 0)
-        {
-            printf("Error: input file is empty.\n");
-            return -2;
-        }
-
-        if (len < 16)
-            fill_buffer(cipher_block, len);
-
-        FILE *f_out = fopen(argv[3], "wb");
-
-        encrypt(iv, cipher_iv, rounds);
-        _xor(cipher_block, cipher_iv, plain_block, BLOCK_SIZE);
-        fwrite(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_out);
-        len = fread(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
-
-        while (len != 0)
-        {
-            if (len < 16)
-                fill_buffer(cipher_block, len);
-
-            encrypt(cipher_iv, cipher_iv, rounds);
-            _xor(cipher_block, cipher_iv, plain_block, BLOCK_SIZE);
-            fwrite(plain_block, sizeof(uint8_t), BLOCK_SIZE, f_out);
-
-            len = fread(cipher_block, sizeof(uint8_t), BLOCK_SIZE, f_in);
-        }
-        
-        fclose(f_out);
-        fclose(f_in);
-    }
-    else
-    {
-        printf("Error: incorrect option %s.\n", argv[1]);
-        return -1;  
-    }
+    fclose(f_out);
+    fclose(f_in);
 
     return 0;
 }
