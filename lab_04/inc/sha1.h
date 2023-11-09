@@ -7,9 +7,9 @@
 // hash values
 extern uint32_t h_0, h_1, h_2, h_3, h_4;
 
-void print_hash(void);
+void fprint_hash(FILE *f);
+void padding(uint8_t block[64], const uint64_t size_in_bits);
 void sha_1(uint8_t *message);
-
-uint8_t file_size(const char* const filename);
+uint64_t file_size(const char* const filename);
 
 #endif // _SHA1_H_

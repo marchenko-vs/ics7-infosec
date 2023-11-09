@@ -63,13 +63,13 @@ uint32_t shift_n(const uint32_t num, const size_t n)
     return ((num << n) | (num >> (32 - n)));
 }
 
-void print_hash(void)
+void fprint_hash(FILE *f)
 {
-    printf("hash = %x", h_0);
-    printf("%x", h_1);
-    printf("%x", h_2);
-    printf("%x", h_3);
-    printf("%x\n", h_4);
+    fprintf(f, "%x", h_0);
+    fprintf(f, "%x", h_1);
+    fprintf(f, "%x", h_2);
+    fprintf(f, "%x", h_3);
+    fprintf(f, "%x\n", h_4);
 }
 
 void sha_1(uint8_t *message)
@@ -136,10 +136,10 @@ void sha_1(uint8_t *message)
     h_4 = sum_mod(h_4, e);
 }
 
-uint8_t file_size(const char* const filename)
+uint64_t file_size(const char* const filename)
 {
     FILE *f = fopen(filename, "rb");
-    uint8_t text_len = 0;
+    uint64_t text_len = 0;
 
     if (f != NULL)
     {
@@ -148,5 +148,31 @@ uint8_t file_size(const char* const filename)
         fclose(f);
     }
 
-    return text_len;
+    return text_len * 8;
+}
+
+void print_uint8_t(const uint8_t *arr, const size_t size)
+{
+    for (size_t i = 0; i < size; ++i)
+        printf("%x", arr[i]);
+    printf("\n\n");
+}
+
+void padding(uint8_t block[64], const uint64_t size_in_bits)
+{
+    uint64_t size_in_bytes = size_in_bits / 8;
+
+    block[size_in_bytes] += 0b10000000;
+
+    for (size_t i = size_in_bytes + 1; i < 64; ++i)
+        block[i] = 0;
+
+    block[56] = 0b11111111 & (size_in_bits >> 56);
+    block[57] = 0b11111111 & (size_in_bits >> 48);
+    block[58] = 0b11111111 & (size_in_bits >> 40);
+    block[59] = 0b11111111 & (size_in_bits >> 32);
+    block[60] = 0b11111111 & (size_in_bits >> 24);
+    block[61] = 0b11111111 & (size_in_bits >> 16);
+    block[62] = 0b11111111 & (size_in_bits >> 8);
+    block[63] = 0b11111111 & (size_in_bits);
 }

@@ -38,11 +38,13 @@ static uint32_t gcd(uint32_t n1, uint32_t n2)
 uint64_t rsa_encrypt(uint64_t a, uint64_t b, uint64_t m)
 {
     uint64_t res = 1;
+
     for (uint64_t i = 0; i < b; ++i)
     {
         res *= a;
         res %= m;
     }
+
     return res;
 }
 
