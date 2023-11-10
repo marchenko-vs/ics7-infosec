@@ -183,16 +183,72 @@ int main(int argc, char **argv)
 
         uint8_t bytes[64];
         size_t len;
+        bool extra_block = false;
 
         FILE *f_out = fopen(argv[3], "wb");
 
         while ((len = fread(&bytes, sizeof(uint8_t), 64, f_in)) != 0)
         {
-            if (len < 64)
-            {
-                padding(bytes, filesize);
-            }
+            if (len < 64 && len >= 56)
+                extra_block = true;
 
+            if (len < 64)
+                padding(bytes, filesize, extra_block);
+
+            sha_1(bytes);
+        }
+
+        if (extra_block || filesize % 512 == 0)
+        {
+            for (size_t i = 0; i < 64; ++i)
+                bytes[i] = 0;
+            padding(bytes, filesize, false);
+            sha_1(bytes);
+        }
+
+        fprint_hash(f_out);
+        fclose(f_out);
+        fclose(f_in);
+    }
+    else if(strcmp(argv[1], "--sha-cmp") == 0)
+    {
+        if (argc != 4)
+        {
+            printf("Error: incorrect number of parameters.\n");
+            printf("Use -h or --help for description.\n");
+            return 1;
+        }
+
+        uint64_t filesize = file_size(argv[2]);
+        FILE *f_in = fopen(argv[2], "rb");
+        if (!f_in)
+        {
+            printf("Error: file cannot be found.\n");
+            return 2;
+        }
+
+        uint8_t bytes[64];
+        size_t len;
+        bool extra_block = false;
+
+        FILE *f_out = fopen(argv[3], "wb");
+
+        while ((len = fread(&bytes, sizeof(uint8_t), 64, f_in)) != 0)
+        {
+            if (len < 64 && len >= 56)
+                extra_block = true;
+
+            if (len < 64)
+                padding(bytes, filesize, extra_block);
+
+            sha_1(bytes);
+        }
+
+        if (extra_block || filesize % 512 == 0)
+        {
+            for (size_t i = 0; i < 64; ++i)
+                bytes[i] = 0;
+            padding(bytes, filesize, false);
             sha_1(bytes);
         }
 

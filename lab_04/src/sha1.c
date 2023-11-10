@@ -1,5 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <stdbool.h>
+#include <inttypes.h>
 
 #include "sha1.h"
 
@@ -65,11 +67,11 @@ uint32_t shift_n(const uint32_t num, const size_t n)
 
 void fprint_hash(FILE *f)
 {
-    fprintf(f, "%x", h_0);
-    fprintf(f, "%x", h_1);
-    fprintf(f, "%x", h_2);
-    fprintf(f, "%x", h_3);
-    fprintf(f, "%x\n", h_4);
+    fprintf(f, "%08"PRIx32, h_0);
+    fprintf(f, "%08"PRIx32, h_1);
+    fprintf(f, "%08"PRIx32, h_2);
+    fprintf(f, "%08"PRIx32, h_3);
+    fprintf(f, "%08"PRIx32, h_4);
 }
 
 void sha_1(uint8_t *message)
@@ -85,7 +87,7 @@ void sha_1(uint8_t *message)
     split_block(message, words);
     for (size_t i = 16; i < 80; ++i)
     {
-        words[i] = (words[i - 3] | words[i - 8] | words[i - 14] | words[i - 16]);
+        words[i] = (words[i - 3] ^ words[i - 8] ^ words[i - 14] ^ words[i - 16]);
         words[i] = shift_n(words[i], 1);
     }
 
@@ -158,21 +160,25 @@ void print_uint8_t(const uint8_t *arr, const size_t size)
     printf("\n\n");
 }
 
-void padding(uint8_t block[64], const uint64_t size_in_bits)
+void padding(uint8_t block[64], const uint64_t size_in_bits, bool extra)
 {
     uint64_t size_in_bytes = size_in_bits / 8;
+    uint64_t size_of_block = size_in_bytes % 64;
 
-    block[size_in_bytes] += 0b10000000;
+    block[size_of_block] = 0b10000000;
 
-    for (size_t i = size_in_bytes + 1; i < 64; ++i)
+    for (size_t i = size_of_block + 1; i < 64; ++i)
         block[i] = 0;
 
-    block[56] = 0b11111111 & (size_in_bits >> 56);
-    block[57] = 0b11111111 & (size_in_bits >> 48);
-    block[58] = 0b11111111 & (size_in_bits >> 40);
-    block[59] = 0b11111111 & (size_in_bits >> 32);
-    block[60] = 0b11111111 & (size_in_bits >> 24);
-    block[61] = 0b11111111 & (size_in_bits >> 16);
-    block[62] = 0b11111111 & (size_in_bits >> 8);
-    block[63] = 0b11111111 & (size_in_bits);
+    if (!extra)
+    {
+        block[56] = 0b11111111 & (size_in_bits >> 56);
+        block[57] = 0b11111111 & (size_in_bits >> 48);
+        block[58] = 0b11111111 & (size_in_bits >> 40);
+        block[59] = 0b11111111 & (size_in_bits >> 32);
+        block[60] = 0b11111111 & (size_in_bits >> 24);
+        block[61] = 0b11111111 & (size_in_bits >> 16);
+        block[62] = 0b11111111 & (size_in_bits >> 8);
+        block[63] = 0b11111111 & (size_in_bits);
+    }
 }
