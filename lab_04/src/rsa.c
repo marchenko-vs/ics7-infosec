@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <math.h>
+#include <gmp.h>
 
 #include "rsa.h"
 
@@ -22,65 +23,85 @@ bool is_prime(const uint32_t n)
     return true;
 }
 
-static uint32_t gcd(uint32_t n1, uint32_t n2)
+void rsa_generate_keys(const char first_prime[], const char second_prime[])
 {
-    uint32_t gcd = 0;
+    FILE *f_e = fopen("cfg/e.txt", "w");
+    FILE *f_d = fopen("cfg/d.txt", "w");
+    FILE *f_n = fopen("cfg/n.txt", "w");
 
-    for(size_t i = 1; i <= n1 && i <= n2; ++i)
-    {
-        if (n1 % i == 0 && n2 % i == 0)
-            gcd = i;
-    }
+    mpz_t p, q, e, d, n, phi;
+    mpz_t p_phi, q_phi;
+    mpz_t one, gcd, mul_val, mod_val;
 
-    return gcd;
-}
+    mpz_init_set_str(p, first_prime, 10);
+    mpz_init_set_str(q, second_prime, 10);
+    mpz_init_set_str(one, "1", 10);
+    mpz_init_set_str(d, "2", 10);
+    mpz_init(n);
+    mpz_init(phi);
+    mpz_init(p_phi);
+    mpz_init(q_phi);
+    mpz_init(gcd);
+    mpz_init(mul_val);
+    mpz_init(mod_val);
 
-uint64_t rsa_encrypt(uint64_t a, uint64_t b, uint64_t m)
-{
-    uint64_t res = 1;
+    mpz_mul(n, p, q);
 
-    for (uint64_t i = 0; i < b; ++i)
-    {
-        res *= a;
-        res %= m;
-    }
-
-    return res;
-}
-
-int rsa_generate_keys(const uint32_t p, const uint32_t q, uint32_t *e, uint32_t *d, uint32_t *n)
-{
-    if (!is_prime(p))
-        return 1;
-    if (!is_prime(q))
-        return 2;
-
-    uint32_t phi = (p - 1) * (q - 1);
-    uint32_t public_key = 2;
-
-    while (public_key < phi)
-    {
-        if (gcd(public_key, phi) == 1)
-            break;
-        ++public_key;
-    }
-
-    uint32_t private_key = 0;
-    uint32_t mod = 0;
+    mpz_sub(p_phi, p, one);
+    mpz_sub(q_phi, q, one);
+    mpz_mul(phi, p_phi, q_phi);
     
-    while (true)
-    {
-        mod = ((private_key * public_key) % phi);
+    mpz_init_set_str(e, "65537", 10);
+    // while (mpz_cmp(e, phi) < 0)
+    // {
+    //     mpz_gcd(gcd, e, phi);
+    //     if (mpz_cmp(gcd, one) == 0)
+    //         break;
+        
+    //     mpz_add(e, e, one);
+    // }
+    
+    mpz_gcdext(gcd, mod_val, mul_val, e, phi);
+    mpz_mod(d, mod_val, phi);
 
-        if (mod == 1 && private_key != public_key)
-            break;
+    gmp_fprintf(f_e, "%Zd\n", e);
+    gmp_fprintf(f_d, "%Zd\n", d);
+    gmp_fprintf(f_n, "%Zd\n", n);
 
-        ++private_key;
-    }
+    mpz_clear(phi);
+    mpz_clear(n);
+    mpz_clear(d);
+    mpz_clear(e);
+    mpz_clear(p);
+    mpz_clear(q);
+    mpz_clear(p_phi);
+    mpz_clear(q_phi);
+    mpz_clear(one);
+    mpz_clear(gcd);
+    mpz_clear(mul_val);
+    mpz_clear(mod_val);
 
-    *e = public_key;
-    *d = private_key;
-    *n = p * q;
+    fclose(f_e);
+    fclose(f_d);
+    fclose(f_n);
+}
 
-    return 0;
+void rsa_encrypt(FILE *f, const char message[], const char exponent[], const char modulus[])
+{
+    mpz_t m, e, n;
+    mpz_t res;
+
+    mpz_init_set_str(m, message, 16);
+    mpz_init_set_str(e, exponent, 10);
+    mpz_init_set_str(n, modulus, 10);
+    mpz_init(res);
+
+    mpz_powm(res, m, e, n);
+
+    gmp_fprintf(f, "%Zx\n", res);
+
+    mpz_clear(m);
+    mpz_clear(e);
+    mpz_clear(n);
+    mpz_clear(res);
 }

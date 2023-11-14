@@ -67,11 +67,11 @@ uint32_t shift_n(const uint32_t num, const size_t n)
 
 void fprint_hash(FILE *f)
 {
-    fprintf(f, "%08"PRIx32, h_0);
-    fprintf(f, "%08"PRIx32, h_1);
-    fprintf(f, "%08"PRIx32, h_2);
-    fprintf(f, "%08"PRIx32, h_3);
-    fprintf(f, "%08"PRIx32, h_4);
+    fprintf(f, "%"PRIx32, h_0);
+    fprintf(f, "%"PRIx32, h_1);
+    fprintf(f, "%"PRIx32, h_2);
+    fprintf(f, "%"PRIx32, h_3);
+    fprintf(f, "%"PRIx32"\n", h_4);
 }
 
 void sha_1(uint8_t *message)

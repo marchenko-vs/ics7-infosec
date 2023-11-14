@@ -5,7 +5,7 @@ INC_DIR := inc
 OBJ_DIR := out
 
 app.exe : $(OBJ_DIR) $(OBJ_DIR)/main.o $(OBJ_DIR)/sha1.o $(OBJ_DIR)/rsa.o
-	$(CC) $(OBJ_DIR)/*.o -o app.exe
+	$(CC) $(OBJ_DIR)/*.o -o app.exe -lgmp
 
 $(OBJ_DIR) :
 	mkdir -p $(OBJ_DIR)
