@@ -52,14 +52,6 @@ void rsa_generate_keys(const char first_prime[], const char second_prime[])
     mpz_mul(phi, p_phi, q_phi);
     
     mpz_init_set_str(e, "65537", 10);
-    // while (mpz_cmp(e, phi) < 0)
-    // {
-    //     mpz_gcd(gcd, e, phi);
-    //     if (mpz_cmp(gcd, one) == 0)
-    //         break;
-        
-    //     mpz_add(e, e, one);
-    // }
     
     mpz_gcdext(gcd, mod_val, mul_val, e, phi);
     mpz_mod(d, mod_val, phi);

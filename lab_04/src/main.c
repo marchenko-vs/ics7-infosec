@@ -24,19 +24,19 @@ int main(int argc, char **argv)
     }
     else if (strcmp(argv[1], "--rsa-keys") == 0)
     {
-        char p[256], q[256];
+        char p[1024], q[1024];
         FILE *f_p, *f_q;
 
         if ((f_p = fopen("cfg/p.txt", "r")) != NULL)
         {
-            ssize_t len = fread(&p, sizeof(char), 255, f_p);
+            ssize_t len = fread(&p, sizeof(char), 1024 - 1, f_p);
             p[len - 1] = '\0';
             fclose(f_p);
         }
 
         if ((f_q = fopen("cfg/q.txt", "r")) != NULL)
         {
-            ssize_t len = fread(&q, sizeof(char), 255, f_q);
+            ssize_t len = fread(&q, sizeof(char), 1024 - 1, f_q);
             q[len - 1] = '\0';
             fclose(f_q);
         }
@@ -52,26 +52,26 @@ int main(int argc, char **argv)
             return 1;
         }
 
-        char exp[512], mod[512], in[512];
+        char exp[1024], mod[1024], in[1024];
         FILE *f_exp, *f_mod, *f_in, *f_out;
 
         if ((f_exp = fopen(argv[2], "r")) != NULL)
         {
-            ssize_t len = fread(&exp, sizeof(char), 511, f_exp);
+            ssize_t len = fread(&exp, sizeof(char), 1024 - 1, f_exp);
             exp[len - 1] = '\0';
             fclose(f_exp);
         }
 
         if ((f_mod = fopen(argv[3], "r")) != NULL)
         {
-            ssize_t len = fread(&mod, sizeof(char), 511, f_mod);
+            ssize_t len = fread(&mod, sizeof(char), 1024 - 1, f_mod);
             mod[len - 1] = '\0';
             fclose(f_mod);
         }
 
         if ((f_in = fopen(argv[4], "r")) != NULL)
         {
-            ssize_t len = fread(&in, sizeof(char), 511, f_in);
+            ssize_t len = fread(&in, sizeof(char), 1024 - 1, f_in);
             in[len - 1] = '\0';
             fclose(f_in);
         }
