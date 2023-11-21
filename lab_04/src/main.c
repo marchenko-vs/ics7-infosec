@@ -19,7 +19,7 @@ int main(int argc, char **argv)
     {
         printf("Usage: ./app.exe [OPTION]... [ARGUMENT]\n\n");
         printf("  --rsa-keys                          generate RSA keys\n");
-        printf("  --rsa exp mod INFILE OUTFILE        encrypt file with RSA\n");
+        printf("  --rsa exp mod INFILE OUTFILE        en(de)crypt file with RSA\n");
         printf("  --sha INFILE OUTFILE                count hash of file\n");
     }
     else if (strcmp(argv[1], "--rsa-keys") == 0)

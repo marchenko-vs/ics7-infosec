@@ -16,6 +16,15 @@ uint32_t h_2 = 0x98badcfe;
 uint32_t h_3 = 0x10325476; 
 uint32_t h_4 = 0xc3d2e1f0;
 
+void fprint_hash(FILE *f)
+{
+    fprintf(f, "%"PRIx32, h_0);
+    fprintf(f, "%"PRIx32, h_1);
+    fprintf(f, "%"PRIx32, h_2);
+    fprintf(f, "%"PRIx32, h_3);
+    fprintf(f, "%"PRIx32"\n", h_4);
+}
+
 void split_block(const uint8_t *const src, uint32_t *dst)
 {
     for (size_t i = 0; i < 16; ++i)
@@ -48,30 +57,12 @@ uint32_t f_3(const uint32_t b, const uint32_t c, const uint32_t d)
     return b ^ c ^ d;
 }
 
-uint32_t sum_mod(const uint32_t a, const uint32_t b)
-{
-    const uint64_t div = 4294967296;
-    uint64_t c = a + b;
-    uint32_t res = c % div;
-
-    return res;
-}
-
 uint32_t shift_n(const uint32_t num, const size_t n)
 {
     if (n > 32)
         return 0;
 
     return ((num << n) | (num >> (32 - n)));
-}
-
-void fprint_hash(FILE *f)
-{
-    fprintf(f, "%"PRIx32, h_0);
-    fprintf(f, "%"PRIx32, h_1);
-    fprintf(f, "%"PRIx32, h_2);
-    fprintf(f, "%"PRIx32, h_3);
-    fprintf(f, "%"PRIx32"\n", h_4);
 }
 
 void sha_1(uint8_t *message)
@@ -93,7 +84,7 @@ void sha_1(uint8_t *message)
 
     for (size_t i = 0; i < 20; ++i)
     {
-        uint32_t tmp = sum_mod(sum_mod(sum_mod(sum_mod(shift_n(a, 5), f_0(b, c, d)), e), words[i]), k_0);
+        uint32_t tmp = shift_n(a, 5) + f_0(b, c, d) + e + words[i] + k_0;
         e = d;
         d = c;
         c = shift_n(b, 30);
@@ -103,7 +94,7 @@ void sha_1(uint8_t *message)
 
     for (size_t i = 20; i < 40; ++i)
     {
-        uint32_t tmp = sum_mod(sum_mod(sum_mod(sum_mod(shift_n(a, 5), f_1(b, c, d)), e), words[i]), k_1);
+        uint32_t tmp = shift_n(a, 5) + f_1(b, c, d) + e + words[i] + k_1;
         e = d;
         d = c;
         c = shift_n(b, 30);
@@ -113,7 +104,7 @@ void sha_1(uint8_t *message)
 
     for (size_t i = 40; i < 60; ++i)
     {
-        uint32_t tmp = sum_mod(sum_mod(sum_mod(sum_mod(shift_n(a, 5), f_2(b, c, d)), e), words[i]), k_2);
+        uint32_t tmp = shift_n(a, 5) + f_2(b, c, d) + e + words[i] + k_2;
         e = d;
         d = c;
         c = shift_n(b, 30);
@@ -123,7 +114,7 @@ void sha_1(uint8_t *message)
 
     for (size_t i = 60; i < 80; ++i)
     {
-        uint32_t tmp = sum_mod(sum_mod(sum_mod(sum_mod(shift_n(a, 5), f_3(b, c, d)), e), words[i]), k_3);
+        uint32_t tmp = shift_n(a, 5) + f_3(b, c, d) + e + words[i] + k_3;
         e = d;
         d = c;
         c = shift_n(b, 30);
@@ -131,11 +122,11 @@ void sha_1(uint8_t *message)
         a = tmp;
     }
 
-    h_0 = sum_mod(h_0, a);
-    h_1 = sum_mod(h_1, b);
-    h_2 = sum_mod(h_2, c);
-    h_3 = sum_mod(h_3, d);
-    h_4 = sum_mod(h_4, e);
+    h_0 += a;
+    h_1 += b;
+    h_2 += c;
+    h_3 += d;
+    h_4 += e;
 }
 
 uint64_t file_size(const char* const filename)

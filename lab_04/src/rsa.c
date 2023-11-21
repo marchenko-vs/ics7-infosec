@@ -6,23 +6,6 @@
 
 #include "rsa.h"
 
-bool is_prime(const uint32_t n)
-{
-    if (n == 2 || n == 3)
-        return true;
-
-    if (n <= 1 || n % 2 == 0 || n % 3 == 0)
-        return false;
-
-    for (size_t i = 5; i * i <= n; i += 6)
-    {
-        if (n % i == 0 || n % (i + 2) == 0)
-            return false;
-    }
-
-    return true;
-}
-
 void rsa_generate_keys(const char first_prime[], const char second_prime[])
 {
     FILE *f_e = fopen("cfg/e.txt", "w");
