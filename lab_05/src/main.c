@@ -3,7 +3,11 @@
 #include <string.h>
 #include <stdint.h>
 
-#define MAX_TREE_HT 256
+#define CHARS_NUM       256
+#define MAX_TREE_HEIGHT 256
+
+unsigned char arr[CHARS_NUM] = {0};
+int freq[CHARS_NUM]          = {0};
 
 struct min_heap_node
 { 
@@ -22,9 +26,6 @@ struct min_heap
 	struct min_heap_node **array; 
 };
 
-unsigned char arr[256] = {0};
-int freq[256]          = {0};
-
 size_t get_file_size(const char *const filename)
 {
 	FILE *f = fopen(filename, "rb");
@@ -39,8 +40,7 @@ size_t get_file_size(const char *const filename)
 
 struct min_heap_node* new_node(unsigned char data, unsigned freq) 
 { 
-	struct min_heap_node* temp = (struct min_heap_node*)malloc( 
-		sizeof(struct min_heap_node)); 
+	struct min_heap_node* temp = (struct min_heap_node *)malloc(sizeof(struct min_heap_node)); 
 
 	temp->left = temp->right = NULL;
 	temp->data = data; 
@@ -133,13 +133,13 @@ void _build_min_heap(struct min_heap* minHeap)
 		min_heapify(minHeap, i); 
 } 
 
-void printArr(int arr[], int n, FILE *f) 
+void fprint_array(int arr[], int n, FILE *f) 
 {
 	for (size_t i = 0; i < n; ++i) 
 		fprintf(f, "%d", arr[i]); 
 } 
 
-int isLeaf(struct min_heap_node* root) 
+int is_leaf(struct min_heap_node* root) 
 { 
 	return !(root->left) && !(root->right); 
 } 
@@ -181,7 +181,7 @@ struct min_heap_node* build_huffman_tree(unsigned char data[],
 	} 
 
 	return extract_min(minHeap); 
-} 
+}
 
 void print_codes(struct min_heap_node* root, int *arr, int top, FILE *f) 
 {
@@ -197,20 +197,20 @@ void print_codes(struct min_heap_node* root, int *arr, int top, FILE *f)
 		print_codes(root->right, arr, top + 1, f); 
 	} 
 
-	if (isLeaf(root))
+	if (is_leaf(root))
     { 
 		fprintf(f, "%u,", root->data);
-		printArr(arr, top, f);
+		fprint_array(arr, top, f);
 		fprintf(f, "\n");
 	}
 }
 
 void find_code(struct min_heap_node* root, int *arr, int top, unsigned char chr, FILE *f) 
 {
-	if (isLeaf(root))
+	if (is_leaf(root))
     { 
 		if (root->data == chr)
-			printArr(arr, top, f);
+			fprint_array(arr, top, f);
 	}
 
 	if (root->left)
@@ -231,7 +231,7 @@ struct min_heap_node* huffman_compression(char data[], int freq[], int size)
 	struct min_heap_node* root 
 		= build_huffman_tree(data, freq, size); 
 
-	int arr[MAX_TREE_HT], top = 0;
+	int arr[MAX_TREE_HEIGHT], top = 0;
 
     FILE *f = fopen("tree.txt", "w");
 	print_codes(root, arr, top, f);
@@ -247,7 +247,7 @@ void encode_file(struct min_heap_node* root, const char *const filename_in,
 	FILE *f_out = fopen(filename_out, "w");
 
 	unsigned char chr;
-	int arr[MAX_TREE_HT], top = 0;
+	int arr[MAX_TREE_HEIGHT], top = 0;
 
 	while (fread(&chr, sizeof(unsigned char), 1, f_in) == 1)
 		find_code(root, arr, top, chr, f_out);
@@ -439,11 +439,17 @@ int main(int argc, char **argv)
 {
 	if (argc != 4)
 	{
-		printf("Error: 3 filenames are required.\n");
+		printf("Error: program requires 3 parameters.\n");
 		return 1;
 	}
 
-	for (size_t i = 0; i < 256; ++i)
+	if (get_file_size(argv[1]) == 0)
+	{
+		printf("Error: input file is empty.\n");
+		return 2;
+	}
+
+	for (size_t i = 0; i < CHARS_NUM; ++i)
 	{
 		arr[i] = i;
 		freq[i] = 0;
@@ -457,10 +463,10 @@ int main(int argc, char **argv)
 
     fclose(f);
 
-    bubble_sort(arr, freq, 256);
-    size_t new_start = new_base(freq, 256);
+    bubble_sort(arr, freq, CHARS_NUM);
+    size_t new_start = new_base(freq, CHARS_NUM);
 
-	struct min_heap_node* root = huffman_compression(arr + new_start, freq + new_start, 256 - new_start);
+	struct min_heap_node* root = huffman_compression(arr + new_start, freq + new_start, CHARS_NUM - new_start);
 
 	encode_file(root, argv[1], "tmp.txt");
 	bits_stream_to_file("tmp.txt", argv[2]);
