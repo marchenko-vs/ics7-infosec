@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #define MAX_TREE_HT 256
 
@@ -322,6 +323,46 @@ void decode_file(struct MinHeapNode* root, const char *const filename_in,
 	fclose(f_out);
 }
 
+void null_buffer(unsigned char *buffer, const size_t size)
+{
+    for (size_t i = 0; i < size; ++i)
+        buffer[i] = '0';
+}
+
+uint8_t bits_to_byte(unsigned char *buffer, const size_t size)
+{
+    uint8_t res = 0b00000000;
+    uint8_t mask = 0b10000000;
+
+    for (size_t i = 0; i < size; ++i, mask >>= 1)
+        if (buffer[i] == '1')
+            res += mask;
+
+    return res;
+}
+
+void bits_stream_to_file(const char *const filename_in,
+						 const char *const filename_out)
+{
+	FILE *f_in = fopen(filename_in, "r");
+	FILE *f_out = fopen(filename_out, "wb");
+
+	uint8_t byte = 0;
+	unsigned char bits[8];
+
+	null_buffer(bits, 8);
+
+	while (fread(&bits, sizeof(char), 8, f_in) > 0)
+	{
+		byte = bits_to_byte(bits, 8);
+		fwrite(&byte, sizeof(uint8_t), 1, f_out);
+		null_buffer(bits, 8);
+	}
+
+	fclose(f_in);
+	fclose(f_out);
+}
+
 int main(int argc, char **argv)
 {
 	if (argc != 4)
@@ -349,8 +390,9 @@ int main(int argc, char **argv)
 
 	struct MinHeapNode* root = build_huffman_tree(arr + new_start, freq + new_start, 256 - new_start);
 
-	encode_file(root, argv[1], argv[2]);
-    decode_file(root, argv[2], argv[3]);
+	encode_file(root, argv[1], "tmp.txt");
+	bits_stream_to_file("tmp.txt", argv[2]);
+    decode_file(root, "tmp.txt", argv[3]);
 
 	return 0; 
 }
