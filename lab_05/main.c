@@ -5,61 +5,71 @@
 
 #define MAX_TREE_HT 256
 
-struct MinHeapNode
+struct min_heap_node
 { 
 	unsigned char data; 
-	unsigned freq; 
-	int leaf;
+	unsigned      freq; 
 
-	struct MinHeapNode *left, *right;
+	struct min_heap_node *left;
+	struct min_heap_node *right;
 };
 
-struct MinHeap
+struct min_heap
 { 
 	unsigned size; 
 	unsigned capacity; 
 
-	struct MinHeapNode** array; 
+	struct min_heap_node **array; 
 };
 
 unsigned char arr[256] = {0};
 int freq[256]          = {0};
 
-struct MinHeapNode* newNode(unsigned char data, unsigned freq) 
+size_t get_file_size(const char *const filename)
+{
+	FILE *f = fopen(filename, "rb");
+
+	fseek(f, 0L, SEEK_END);
+	size_t size = ftell(f);
+
+	fclose(f);
+
+	return size;
+}
+
+struct min_heap_node* new_node(unsigned char data, unsigned freq) 
 { 
-	struct MinHeapNode* temp = (struct MinHeapNode*)malloc( 
-		sizeof(struct MinHeapNode)); 
+	struct min_heap_node* temp = (struct min_heap_node*)malloc( 
+		sizeof(struct min_heap_node)); 
 
 	temp->left = temp->right = NULL;
-	temp->leaf = 1;
 	temp->data = data; 
 	temp->freq = freq; 
 
 	return temp; 
 } 
 
-struct MinHeap* createMinHeap(unsigned capacity) 
+struct min_heap* create_min_heap(unsigned capacity) 
 { 
-	struct MinHeap* minHeap 
-		= (struct MinHeap*)malloc(sizeof(struct MinHeap)); 
+	struct min_heap* minHeap = (struct min_heap*)malloc(sizeof(struct min_heap)); 
 
 	minHeap->size = 0; 
 	minHeap->capacity = capacity; 
-	minHeap->array = (struct MinHeapNode**)malloc( 
-		minHeap->capacity * sizeof(struct MinHeapNode*));
+	minHeap->array = (struct min_heap_node **)malloc(minHeap->capacity * 
+		sizeof(struct min_heap_node*));
 
 	return minHeap; 
 } 
 
-void swapMinHeapNode(struct MinHeapNode** a, 
-					struct MinHeapNode** b) 
+void swap_min_heap_node(struct min_heap_node** a, 
+					    struct min_heap_node** b) 
 { 
-	struct MinHeapNode* t = *a; 
+	struct min_heap_node* t = *a; 
 	*a = *b; 
 	*b = t; 
 } 
 
-void minHeapify(struct MinHeap* minHeap, int idx) 
+void min_heapify(struct min_heap* minHeap, int idx) 
 { 
 	int smallest = idx; 
 	int left = 2 * idx + 1; 
@@ -76,29 +86,29 @@ void minHeapify(struct MinHeap* minHeap, int idx)
 		smallest = right; 
 
 	if (smallest != idx) { 
-		swapMinHeapNode(&minHeap->array[smallest], 
+		swap_min_heap_node(&minHeap->array[smallest], 
 						&minHeap->array[idx]); 
-		minHeapify(minHeap, smallest); 
+		min_heapify(minHeap, smallest); 
 	} 
 } 
 
-int isSizeOne(struct MinHeap* minHeap) 
+int is_size_one(struct min_heap* minHeap) 
 { 
 	return minHeap->size == 1; 
 } 
 
-struct MinHeapNode* extractMin(struct MinHeap* minHeap) 
+struct min_heap_node* extract_min(struct min_heap* minHeap) 
 { 
-	struct MinHeapNode* temp = minHeap->array[0]; 
+	struct min_heap_node* temp = minHeap->array[0]; 
 	minHeap->array[0] = minHeap->array[minHeap->size - 1]; 
 	--minHeap->size; 
-	minHeapify(minHeap, 0); 
+	min_heapify(minHeap, 0); 
 
 	return temp; 
 }
 
-void insertMinHeap(struct MinHeap* minHeap, 
-				struct MinHeapNode* minHeapNode) 
+void insert_min_heap(struct min_heap* minHeap, 
+				struct min_heap_node* minHeapNode) 
 { 
 	++minHeap->size; 
 	int i = minHeap->size - 1; 
@@ -114,13 +124,13 @@ void insertMinHeap(struct MinHeap* minHeap,
 	minHeap->array[i] = minHeapNode; 
 } 
 
-void buildMinHeap(struct MinHeap* minHeap) 
+void _build_min_heap(struct min_heap* minHeap) 
 { 
 	int n = minHeap->size - 1; 
 	int i; 
 
 	for (i = (n - 1) / 2; i >= 0; --i) 
-		minHeapify(minHeap, i); 
+		min_heapify(minHeap, i); 
 } 
 
 void printArr(int arr[], int n, FILE *f) 
@@ -129,63 +139,62 @@ void printArr(int arr[], int n, FILE *f)
 		fprintf(f, "%d", arr[i]); 
 } 
 
-int isLeaf(struct MinHeapNode* root) 
+int isLeaf(struct min_heap_node* root) 
 { 
 	return !(root->left) && !(root->right); 
 } 
 
-struct MinHeap* createAndBuildMinHeap(unsigned char data[], 
+struct min_heap* build_min_heap(unsigned char data[], 
 									int freq[], int size) 
 {
-	struct MinHeap* minHeap = createMinHeap(size); 
+	struct min_heap* minHeap = create_min_heap(size); 
 
 	for (int i = 0; i < size; ++i) 
-		minHeap->array[i] = newNode(data[i], freq[i]); 
+		minHeap->array[i] = new_node(data[i], freq[i]); 
 
 	minHeap->size = size; 
-	buildMinHeap(minHeap); 
+	_build_min_heap(minHeap); 
 
 	return minHeap; 
 } 
 
-struct MinHeapNode* buildHuffmanTree(unsigned char data[], 
+struct min_heap_node* build_huffman_tree(unsigned char data[], 
 									int freq[], int size) 
 
 { 
-	struct MinHeapNode *left, *right, *top; 
+	struct min_heap_node *left, *right, *top; 
 
-	struct MinHeap* minHeap 
-		= createAndBuildMinHeap(data, freq, size); 
+	struct min_heap* minHeap 
+		= build_min_heap(data, freq, size); 
 
-	while (!isSizeOne(minHeap))
+	while (!is_size_one(minHeap))
 	{ 
-		left = extractMin(minHeap); 
-		right = extractMin(minHeap); 
+		left = extract_min(minHeap); 
+		right = extract_min(minHeap); 
 
-		top = newNode('$', left->freq + right->freq);
-		top->leaf = 0;
+		top = new_node('$', left->freq + right->freq);
 
 		top->left = left; 
 		top->right = right; 
 
-		insertMinHeap(minHeap, top); 
+		insert_min_heap(minHeap, top); 
 	} 
 
-	return extractMin(minHeap); 
+	return extract_min(minHeap); 
 } 
 
-void printCodes(struct MinHeapNode* root, int *arr, int top, FILE *f) 
+void print_codes(struct min_heap_node* root, int *arr, int top, FILE *f) 
 {
 	if (root->left)
     { 
 		arr[top] = 0; 
-		printCodes(root->left, arr, top + 1, f); 
+		print_codes(root->left, arr, top + 1, f); 
 	} 
 
 	if (root->right)
     { 
 		arr[top] = 1; 
-		printCodes(root->right, arr, top + 1, f); 
+		print_codes(root->right, arr, top + 1, f); 
 	} 
 
 	if (isLeaf(root))
@@ -196,7 +205,7 @@ void printCodes(struct MinHeapNode* root, int *arr, int top, FILE *f)
 	}
 }
 
-void find_code(struct MinHeapNode* root, int *arr, int top, unsigned char chr, FILE *f) 
+void find_code(struct min_heap_node* root, int *arr, int top, unsigned char chr, FILE *f) 
 {
 	if (isLeaf(root))
     { 
@@ -217,21 +226,21 @@ void find_code(struct MinHeapNode* root, int *arr, int top, unsigned char chr, F
 	}
 }
 
-struct MinHeapNode* build_huffman_tree(char data[], int freq[], int size) 
+struct min_heap_node* huffman_compression(char data[], int freq[], int size) 
 { 
-	struct MinHeapNode* root 
-		= buildHuffmanTree(data, freq, size); 
+	struct min_heap_node* root 
+		= build_huffman_tree(data, freq, size); 
 
 	int arr[MAX_TREE_HT], top = 0;
 
-    FILE *f = fopen("tree.csv", "w");
-	printCodes(root, arr, top, f);
+    FILE *f = fopen("tree.txt", "w");
+	print_codes(root, arr, top, f);
     fclose(f);
 
     return root;
 }
 
-void encode_file(struct MinHeapNode* root, const char *const filename_in, 
+void encode_file(struct min_heap_node* root, const char *const filename_in, 
 										   const char *const filename_out)
 {
     FILE *f_in = fopen(filename_in, "rb");
@@ -241,9 +250,7 @@ void encode_file(struct MinHeapNode* root, const char *const filename_in,
 	int arr[MAX_TREE_HT], top = 0;
 
 	while (fread(&chr, sizeof(unsigned char), 1, f_in) == 1)
-	{
 		find_code(root, arr, top, chr, f_out);
-	}
     
     fclose(f_in);
 	fclose(f_out);
@@ -296,20 +303,21 @@ size_t new_base(int *freq, const size_t size)
     return 0;
 }
 
-void decode_file(struct MinHeapNode* root, const char *const filename_in,
+// для разжатия файла в представлении 0-й и 1-ц
+void decode_file(struct min_heap_node* root, const char *const filename_in,
 										   const char *const filename_out)
 {
     FILE *f_in = fopen(filename_in, "r");
 	FILE *f_out = fopen(filename_out, "wb");
 	
 	char bit;
-    struct MinHeapNode* curr = root;
+    struct min_heap_node* curr = root;
 
     while (fread(&bit, sizeof(char), 1, f_in) == 1)
     {
         if (bit == '0')
             curr = curr->left;
-        else if ((bit == '1'))
+        else if (bit == '1')
             curr = curr->right;
  
         if (curr->left == NULL && curr->right == NULL)
@@ -317,6 +325,48 @@ void decode_file(struct MinHeapNode* root, const char *const filename_in,
             fwrite(&curr->data, sizeof(unsigned char), 1, f_out);
             curr = root;
         }
+    }
+    
+    fclose(f_in);
+	fclose(f_out);
+}
+
+// для разжатия файла в байтовом представлении
+void decode_byte_file(struct min_heap_node* root, const char *const filename_in,
+										   const char *const filename_out)
+{
+	size_t size = get_file_size(filename_in) - 1;
+
+    FILE *f_in = fopen(filename_in, "rb");
+	FILE *f_out = fopen(filename_out, "wb");
+	
+	unsigned char byte;
+    struct min_heap_node* curr = root;
+	uint8_t last_bits;
+	int shifts = 8;
+	
+	fread(&last_bits, sizeof(uint8_t), 1, f_in);
+
+    while (fread(&byte, sizeof(unsigned char), 1, f_in) > 0)
+    {
+		if (size == 1)
+			shifts = last_bits;
+
+		for (size_t i = 0; i < shifts; ++i)
+		{
+			if (byte & (1 << (8 - i - 1)))
+				curr = curr->right;
+        	else
+				curr = curr->left;
+
+			if (curr->left == NULL && curr->right == NULL)
+			{
+				fwrite(&curr->data, sizeof(unsigned char), 1, f_out);
+				curr = root;
+			}
+		}
+		
+		--size;
     }
     
     fclose(f_in);
@@ -344,6 +394,9 @@ uint8_t bits_to_byte(unsigned char *buffer, const size_t size)
 void bits_stream_to_file(const char *const filename_in,
 						 const char *const filename_out)
 {
+	size_t size_in_bits = get_file_size(filename_in);
+	uint8_t size = size_in_bits % 8;
+
 	FILE *f_in = fopen(filename_in, "r");
 	FILE *f_out = fopen(filename_out, "wb");
 
@@ -351,6 +404,8 @@ void bits_stream_to_file(const char *const filename_in,
 	unsigned char bits[8];
 
 	null_buffer(bits, 8);
+
+	fwrite(&size, sizeof(uint8_t), 1, f_out);
 
 	while (fread(&bits, sizeof(char), 8, f_in) > 0)
 	{
@@ -361,6 +416,23 @@ void bits_stream_to_file(const char *const filename_in,
 
 	fclose(f_in);
 	fclose(f_out);
+}
+
+void print_ratio(const char *const filename_original,
+				 const char *const filename_compressed)
+{
+	FILE *f_original = fopen(filename_original, "rb");
+	FILE *f_compressed = fopen(filename_compressed, "rb");
+
+	fseek(f_original, 0L, SEEK_END);
+	size_t size_original = ftell(f_original);
+	fseek(f_compressed, 0L, SEEK_END);
+	size_t size_compressed = ftell(f_compressed);
+
+	fclose(f_original);
+	fclose(f_compressed);
+
+	printf("Compression ratio: %llf.\n", (double)size_original / (double)size_compressed);
 }
 
 int main(int argc, char **argv)
@@ -388,11 +460,13 @@ int main(int argc, char **argv)
     bubble_sort(arr, freq, 256);
     size_t new_start = new_base(freq, 256);
 
-	struct MinHeapNode* root = build_huffman_tree(arr + new_start, freq + new_start, 256 - new_start);
+	struct min_heap_node* root = huffman_compression(arr + new_start, freq + new_start, 256 - new_start);
 
 	encode_file(root, argv[1], "tmp.txt");
 	bits_stream_to_file("tmp.txt", argv[2]);
-    decode_file(root, "tmp.txt", argv[3]);
+	decode_byte_file(root, argv[2], argv[3]);
+
+	print_ratio(argv[1], argv[2]);
 
 	return 0; 
 }
