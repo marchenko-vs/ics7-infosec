@@ -233,7 +233,7 @@ struct min_heap_node* huffman_compression(char data[], int freq[], int size)
 
 	int arr[MAX_TREE_HEIGHT], top = 0;
 
-    FILE *f = fopen("tree.txt", "w");
+    FILE *f = fopen("cfg/tree.txt", "w");
 	print_codes(root, arr, top, f);
     fclose(f);
 
@@ -435,6 +435,35 @@ void print_ratio(const char *const filename_original,
 	printf("Compression ratio: %llf.\n", (double)size_original / (double)size_compressed);
 }
 
+void save_frequencies(const char *const filename)
+{
+	FILE *f = fopen(filename, "w");
+
+	for (int i = 0; i < CHARS_NUM; ++i)
+	{
+		if (freq[i] > 0)
+		{
+			fprintf(f, "%d,%d\n", arr[i], freq[i]);
+		}
+	}
+
+	fclose(f);
+}
+
+void load_frequencies(const char *const filename)
+{
+	FILE *f = fopen(filename, "r");
+	int pos = 0, frequency = 0;
+
+	while (fscanf(f, "%d,%d\n", &pos, &frequency) != EOF)
+	{
+		arr[pos] = pos;
+		freq[pos] = frequency;
+	}
+
+	fclose(f);
+}
+
 int main(int argc, char **argv)
 {
 	if (argc != 4)
@@ -443,7 +472,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (get_file_size(argv[1]) == 0)
+	if (get_file_size(argv[2]) == 0)
 	{
 		printf("Error: input file is empty.\n");
 		return 2;
@@ -455,24 +484,42 @@ int main(int argc, char **argv)
 		freq[i] = 0;
 	}
 
-    FILE *f = fopen(argv[1], "rb");
-    unsigned char chr;
+	if (strcmp(argv[1], "-c") == 0)
+	{
+		FILE *f = fopen(argv[2], "rb");
+		unsigned char chr;
 
-    while (fread(&chr, sizeof(unsigned char), 1, f) == 1)
-        freq[chr]++;
+		while (fread(&chr, sizeof(unsigned char), 1, f) == 1)
+			freq[chr]++;
 
-    fclose(f);
+		fclose(f);
 
-    bubble_sort(arr, freq, CHARS_NUM);
-    size_t new_start = new_base(freq, CHARS_NUM);
+		bubble_sort(arr, freq, CHARS_NUM);
+		size_t new_start = new_base(freq, CHARS_NUM);
 
-	struct min_heap_node* root = huffman_compression(arr + new_start, freq + new_start, CHARS_NUM - new_start);
+		save_frequencies("cfg/freq.csv");
 
-	encode_file(root, argv[1], "tmp.txt");
-	bits_stream_to_file("tmp.txt", argv[2]);
-	decode_byte_file(root, argv[2], argv[3]);
+		struct min_heap_node* root = huffman_compression(arr + new_start, freq + new_start, CHARS_NUM - new_start);
 
-	print_ratio(argv[1], argv[2]);
+		encode_file(root, argv[2], "cfg/tmp.txt");
+		bits_stream_to_file("cfg/tmp.txt", argv[3]);
+		print_ratio(argv[2], argv[3]);
+	}
+	else if (strcmp(argv[1], "-d") == 0)
+	{
+		load_frequencies("cfg/freq.csv");
+		bubble_sort(arr, freq, CHARS_NUM);
+		size_t new_start = new_base(freq, CHARS_NUM);
+
+		struct min_heap_node* root = huffman_compression(arr + new_start, freq + new_start, CHARS_NUM - new_start);
+
+		decode_byte_file(root, argv[2], argv[3]);
+	}
+	else
+	{
+		printf("Error: incorrect option.\n");
+		return 3;
+	}
 
 	return 0; 
 }
